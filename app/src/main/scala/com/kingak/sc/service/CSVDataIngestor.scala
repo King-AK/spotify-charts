@@ -2,14 +2,17 @@ package com.kingak.sc.service
 
 import com.kingak.sc.model.SpotifyChartData
 import com.kingak.sc.utils.SparkSessionProvider
+import com.kingak.sc.utils.SparkUtils.{
+  batchUpsertToDelta,
+  createDeltaTableIfNotExists
+}
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.DeltaTable
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.{Dataset, Encoders}
 import scopt.{OParser, OParserBuilder}
 
-object CSVDataIngestor extends SparkSessionProvider
-  with LazyLogging {
+object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
 
   case class Config(
       inputPath: String = "",
@@ -45,34 +48,16 @@ object CSVDataIngestor extends SparkSessionProvider
     )
   }
 
-  def upsertToDelta(
-      dt: DeltaTable
-  )(mergeCondition: String)(df: Dataset[_], batchId: Long): Unit = {
-    dt.as("existing")
-      .merge(
-        df.toDF.as("updates"),
-        mergeCondition
-      )
-      .whenMatched()
-      .updateAll()
-      .whenNotMatched()
-      .insertAll()
-      .execute()
-  }
-
   import spark.implicits._
 
   def main(args: Array[String]): Unit = {
-    // parse command line arguments
     OParser.parse(argParser, args, Config()) match {
       case Some(config) =>
         // confirm that the input path exists
         assert(new java.io.File(config.inputPath).exists)
 
-        // Build schema using case class
         val schema = Encoders.product[SpotifyChartData].schema
 
-        // Read CSV files in directory into streaming DataSet
         val ds = spark.readStream
           .schema(schema)
           .option("header", "true")
@@ -82,26 +67,15 @@ object CSVDataIngestor extends SparkSessionProvider
         val checkpointLocation =
           config.checkpointPath.getOrElse(config.outputPath + "/_checkpoint")
         val dt: DeltaTable = {
-          if (new java.io.File(config.outputPath).exists) {
-            assert(DeltaTable.isDeltaTable(config.outputPath))
-          } else {
-            logger.info(s"Delta table does not exist, creating new Delta table at path ${config.outputPath}")
-            ds.writeStream
-              .format("delta")
-              .option("path", config.outputPath)
-              .option("checkpointLocation", checkpointLocation)
-              .trigger(Trigger.AvailableNow())
-              .start()
-              .awaitTermination()
-          }
+          createDeltaTableIfNotExists(config.outputPath, checkpointLocation, ds)
           DeltaTable.forPath(spark, config.outputPath)
         }
 
-        val mergeCondition = "TODO"
+        val mergeCondition: String =
+          "existing.date = updates.date AND existing.track_id = updates.track_id"
 
-        // Stream upsert to Delta Lake
         ds.writeStream
-          .foreachBatch(upsertToDelta(dt)(mergeCondition) _)
+          .foreachBatch(batchUpsertToDelta(dt)(mergeCondition) _)
           .outputMode("update")
           .option("checkpointLocation", checkpointLocation)
           .trigger(Trigger.AvailableNow())
