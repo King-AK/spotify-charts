@@ -1,4 +1,4 @@
-package com.kingak.sc.service
+package com.kingak.sc.service.bronzeToSilver
 
 import com.kingak.sc.model.SpotifyChartData
 import com.kingak.sc.utils.SparkSessionProvider
@@ -8,8 +8,8 @@ import com.kingak.sc.utils.SparkUtils.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.DeltaTable
+import org.apache.spark.sql.Encoders
 import org.apache.spark.sql.streaming.Trigger
-import org.apache.spark.sql.{Dataset, Encoders}
 import scopt.{OParser, OParserBuilder}
 
 object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
