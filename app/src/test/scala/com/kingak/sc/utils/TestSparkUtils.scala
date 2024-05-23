@@ -62,15 +62,13 @@ class TestSparkUtils extends AnyFunSuite with BeforeAndAfterEach {
       .csv(testDataPath)
       .as[TestData]
 
-    createDeltaTableIfNotExists(tablePath, checkpointPath, testDS)
+    createDeltaTableIfNotExists(tablePath, testDS)
 
     // confirm table exists
     assert(new File(tablePath).exists)
-    // confirm checkpoint exists
-    assert(new File(checkpointPath).exists)
-    // confirm table has correct data
+    // confirm table is empty as no data should be written on creation
     val df = spark.read.format("delta").load(tablePath)
-    assertResult(3)(df.count)
+    assertResult(0)(df.count)
   }
 
   test(
@@ -98,9 +96,19 @@ class TestSparkUtils extends AnyFunSuite with BeforeAndAfterEach {
       .csv(testDataPath)
       .as[TestData]
 
-    createDeltaTableIfNotExists(tablePath, checkpointPath, testDS)
+    createDeltaTableIfNotExists(tablePath, testDS)
     val dt: DeltaTable = DeltaTable.forPath(tablePath)
+    assert(dt.toDF.count == 0)
 
+    // write first batch of test data
+    val mergeCondition = "existing.A = updates.A"
+    testDS.writeStream
+      .foreachBatch(SparkUtils.batchUpsertToDelta(dt)(mergeCondition) _)
+      .outputMode("update")
+      .option("checkpointLocation", checkpointPath)
+      .trigger(Trigger.AvailableNow())
+      .start()
+      .awaitTermination()
     assert(dt.toDF.count == 3)
 
     // copy batch 2 test data to test directory
@@ -109,15 +117,13 @@ class TestSparkUtils extends AnyFunSuite with BeforeAndAfterEach {
       new File(s"$testDataPath/test_data_2.csv").toPath
     )
 
-    val testDS2 = spark.readStream
+    // read and write second batch of test data
+    spark.readStream
       .schema(schema)
       .option("header", "true")
       .csv(testDataPath)
       .as[TestData]
-
-    val mergeCondition = "existing.A = updates.A"
-
-    testDS2.writeStream
+      .writeStream
       .foreachBatch(SparkUtils.batchUpsertToDelta(dt)(mergeCondition) _)
       .outputMode("update")
       .option("checkpointLocation", checkpointPath)

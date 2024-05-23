@@ -1,18 +1,16 @@
 package com.kingak.sc.utils
 
 import com.typesafe.scalalogging.LazyLogging
-import io.delta.tables.DeltaTable
+import io.delta.tables.{DeltaTable, DeltaTableBuilder}
 import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.sql.{DataFrame, Dataset}
 
 object SparkUtils extends SparkSessionProvider with LazyLogging {
 
-  val log = logger
-
   def createDeltaTableIfNotExists(
       path: String,
-      checkpointPath: String,
-      ds: Dataset[_]
+      ds: Dataset[_],
+      clusterBy: Option[Seq[String]] = None
   ): Unit = {
     if (new java.io.File(path).exists) {
       assert(DeltaTable.isDeltaTable(path))
@@ -21,13 +19,24 @@ object SparkUtils extends SparkSessionProvider with LazyLogging {
       logger.info(
         s"Delta table does not exist, creating new Delta table at path ${path}"
       )
-      ds.writeStream
-        .format("delta")
-        .option("path", path)
-        .option("checkpointLocation", checkpointPath)
-        .trigger(Trigger.AvailableNow())
-        .start()
-        .awaitTermination()
+
+      val schema = ds.schema
+      val dtBuilder: DeltaTableBuilder = schema.foldLeft(DeltaTable.create()) {
+        (dt, field) =>
+          dt.addColumn(field.name, field.dataType.typeName, field.nullable)
+      }
+
+      {
+        clusterBy match {
+          case Some(clusterByCols) =>
+            logger.info(
+              s"Clustering new Delta Table by columns: ${clusterByCols.mkString(", ")}"
+            )
+            dtBuilder.clusterBy(clusterByCols: _*)
+          case None => dtBuilder
+        }
+      }.location(path).execute()
+
     }
   }
 

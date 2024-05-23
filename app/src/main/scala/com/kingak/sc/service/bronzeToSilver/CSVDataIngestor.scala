@@ -67,7 +67,7 @@ object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
         val checkpointLocation =
           config.checkpointPath.getOrElse(config.outputPath + "/_checkpoint")
         val dt: DeltaTable = {
-          createDeltaTableIfNotExists(config.outputPath, checkpointLocation, ds)
+          createDeltaTableIfNotExists(config.outputPath, ds)
           DeltaTable.forPath(spark, config.outputPath)
         }
 
