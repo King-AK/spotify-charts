@@ -3,11 +3,10 @@ package com.kingak.sc.utils
 import com.kingak.sc.testDataModel.TestData
 import com.kingak.sc.utils.SparkUtils.createDeltaTableIfNotExists
 import io.delta.tables.DeltaTable
-import org.apache.spark.sql.{Encoders, SparkSession}
-import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.streaming.Trigger
+import org.apache.spark.sql.{Encoders, SparkSession}
 import org.junit.runner.RunWith
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.junit.JUnitRunner
 

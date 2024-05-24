@@ -1,10 +1,10 @@
 package com.kingak.sc.model
 
-case class SpotifyChartData(
+case class SpotifyChartData( // TODO rename to RawSpotifyChartData, and make a new case class SpotifyChartData
     id: String,
     title: String,
     rank: Int,
-    date: String, // TODO: import java.time.LocalDate
+    date: java.time.LocalDate,
     artist: String,
     url: String,
     region: String,
@@ -16,7 +16,7 @@ case class SpotifyChartData(
     popularity: Double,
     duration_ms: Long,
     explicit: Boolean,
-    release_date: String, // TODO: import java.time.LocalDate
+    release_date: java.time.LocalDate,
     available_markets: String, // TODO seq[String]
     af_danceability: Double,
     af_energy: Double,
