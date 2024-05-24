@@ -2,8 +2,7 @@ package com.kingak.sc.utils
 
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.{DeltaTable, DeltaTableBuilder}
-import org.apache.spark.sql.streaming.Trigger
-import org.apache.spark.sql.{DataFrame, Dataset}
+import org.apache.spark.sql.Dataset
 
 object SparkUtils extends SparkSessionProvider with LazyLogging {
 

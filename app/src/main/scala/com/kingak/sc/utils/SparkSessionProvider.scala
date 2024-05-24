@@ -20,6 +20,10 @@ trait SparkSessionProvider {
       "spark.delta.logStore.class",
       "org.apache.spark.sql.delta.storage.S3SingleDriverLogStore"
     )
+    .config(
+      "spark.sql.parquet.datetimeRebaseModeInWrite",
+      "CORRECTED"
+    )
     .getOrCreate()
 
 }

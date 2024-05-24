@@ -1,0 +1,6 @@
+poc_storage_account                    = "dbxpocsac"
+poc_container_name                     = "spotify-chart-project"
+poc_resource_group                     = "dbxpoc-rg"
+poc_location                           = "eastus"
+#azure_databricks_workspace_resource_id = ""
+#databricks_workspace_url               = ""

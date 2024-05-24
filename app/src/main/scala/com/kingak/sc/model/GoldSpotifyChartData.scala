@@ -1,15 +1,16 @@
 package com.kingak.sc.model
 
-case class SpotifyChartData( // TODO rename to RawSpotifyChartData, and make a new case class SpotifyChartData
+case class GoldSpotifyChartData(
+    songUUID: String,
     id: String,
     title: String,
     rank: Int,
     date: java.time.LocalDate,
-    artist: String,
+    artists: Seq[String],
     url: String,
     region: String,
-    chart: String, // TODO enum
-    trend: String, // TODO enum
+    chart: String,
+    trend: String,
     streams: Long,
     track_id: String,
     album: String,
@@ -17,7 +18,7 @@ case class SpotifyChartData( // TODO rename to RawSpotifyChartData, and make a n
     duration_ms: Long,
     explicit: Boolean,
     release_date: java.time.LocalDate,
-    available_markets: String, // TODO seq[String]
+    available_markets: Seq[String],
     af_danceability: Double,
     af_energy: Double,
     af_key: Int,

@@ -1,6 +1,6 @@
-package com.kingak.sc.service.bronzeToSilver
+package com.kingak.sc.service.silverIngestion
 
-import com.kingak.sc.model.SpotifyChartData
+import com.kingak.sc.model.{BronzeSpotifyChartData, SilverSpotifyChartData}
 import com.kingak.sc.utils.SparkSessionProvider
 import com.kingak.sc.utils.SparkUtils.{
   batchUpsertToDelta,
@@ -8,11 +8,13 @@ import com.kingak.sc.utils.SparkUtils.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.DeltaTable
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Dataset, Encoders}
 import org.apache.spark.sql.streaming.Trigger
 import scopt.{OParser, OParserBuilder}
 
-object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
+object SilverSCDTableBuilder extends SparkSessionProvider with LazyLogging {
 
   case class Config(
       inputPath: String = "",
@@ -24,8 +26,8 @@ object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
   val argParser: OParser[Unit, Config] = {
     import builder._
     OParser.sequence(
-      programName("CSVDataIngestor"),
-      head("CSVDataIngestor", "0.1"),
+      programName("SilverSCDTableBuilder"),
+      head("SilverSCDTableBuilder", "0.1"),
       opt[String]('i', "input")
         .required()
         .valueName("<input>")
@@ -50,19 +52,38 @@ object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
 
   import spark.implicits._
 
+  private def buildArtistsColumn(artist: String): Array[String] = {
+    artist.split(",").map(_.trim)
+  }
+  private val buildArtistsUDF: UserDefinedFunction = udf(buildArtistsColumn _)
+
+  def silverTransform(
+      ds: Dataset[BronzeSpotifyChartData]
+  ): Dataset[SilverSpotifyChartData] = {
+    ds
+      .withColumn(
+        "available_markets",
+        split(regexp_replace($"available_markets", "[\\[\\]'\\s]", ""), ",")
+      )
+      .withColumn("artists", buildArtistsUDF($"artist"))
+      .drop("artist")
+      .as[SilverSpotifyChartData]
+  }
+
   def main(args: Array[String]): Unit = {
     OParser.parse(argParser, args, Config()) match {
       case Some(config) =>
         // confirm that the input path exists
         assert(new java.io.File(config.inputPath).exists)
 
-        val schema = Encoders.product[SpotifyChartData].schema
+        val schema = Encoders.product[BronzeSpotifyChartData].schema
 
-        val ds = spark.readStream
+        val ds: Dataset[SilverSpotifyChartData] = spark.readStream
           .schema(schema)
-          .option("header", "true")
-          .csv(config.inputPath)
-          .as[SpotifyChartData]
+          .option("format", "delta")
+          .load()
+          .as[BronzeSpotifyChartData]
+          .transform(silverTransform)
 
         val checkpointLocation =
           config.checkpointPath.getOrElse(config.outputPath + "/_checkpoint")
@@ -80,6 +101,7 @@ object CSVDataIngestor extends SparkSessionProvider with LazyLogging {
           .option("checkpointLocation", checkpointLocation)
           .trigger(Trigger.AvailableNow())
           .start()
+          .awaitTermination()
 
       case _ =>
         logger.error("Failed to parse command line arguments")

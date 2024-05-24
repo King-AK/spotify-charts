@@ -42,6 +42,9 @@ dependencies {
     // CLI Parsing
     implementation 'com.github.scopt:scopt_2.12:4.1.0'
 
+    // UUID Generation
+    implementation 'com.fasterxml.uuid:java-uuid-generator:5.0.0'
+
     //Spark
     implementation 'org.apache.spark:spark-sql_2.12:3.5.0'
     implementation 'org.apache.spark:spark-core_2.12:3.5.0'
