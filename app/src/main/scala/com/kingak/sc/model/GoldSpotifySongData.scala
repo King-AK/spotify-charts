@@ -4,7 +4,6 @@ package com.kingak.sc.model
 case class GoldSpotifySongData(
     songUUID: String,
     title: String,
-    artist: String,
     url: String,
     track_id: String,
     album: String,

@@ -21,7 +21,7 @@ class TestBronzeSCDTableBuilder extends AnyFunSuite with BeforeAndAfterEach {
   ) {
     val schema = Encoders.product[BronzeSpotifyChartData].schema
 
-    val testDataPath = "src/test/resources/RawSpotifyChartData/file_1.csv"
+    val testDataPath = "src/test/resources/RawSpotifyChartData/"
 
     val df = spark.read
       .schema(schema)
@@ -30,7 +30,7 @@ class TestBronzeSCDTableBuilder extends AnyFunSuite with BeforeAndAfterEach {
       .csv(testDataPath)
       .as[BronzeSpotifyChartData]
 
-    assertResult(10000)(df.count)
+    assertResult(30000)(df.count)
   }
 
 }

@@ -50,6 +50,9 @@ dependencies {
     implementation 'org.apache.spark:spark-core_2.12:3.5.0'
     implementation 'io.delta:delta-spark_2.12:3.2.0'
 
+    // Databricks
+    implementation 'com.databricks:dbutils-api_2.12:0.0.6'
+
     // Numerical libraries
     implementation 'com.twitter:algebird-core_2.12:0.13.10'
     implementation 'org.scalanlp:breeze_2.12:2.1.0'

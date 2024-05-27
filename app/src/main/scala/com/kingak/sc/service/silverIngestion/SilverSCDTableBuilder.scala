@@ -8,9 +8,9 @@ import com.kingak.sc.utils.SparkUtils.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.DeltaTable
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Dataset, Encoders}
 import org.apache.spark.sql.streaming.Trigger
 import scopt.{OParser, OParserBuilder}
 
@@ -31,10 +31,6 @@ object SilverSCDTableBuilder extends SparkSessionProvider with LazyLogging {
       opt[String]('i', "input")
         .required()
         .valueName("<input>")
-        .validate(x =>
-          if (new java.io.File(x).exists) success
-          else failure("input file does not exist")
-        )
         .action((x, c) => c.copy(inputPath = x))
         .text("input specifies the path to the input file or directory"),
       opt[String]('o', "output")
@@ -66,6 +62,11 @@ object SilverSCDTableBuilder extends SparkSessionProvider with LazyLogging {
         split(regexp_replace($"available_markets", "[\\[\\]'\\s]", ""), ",")
       )
       .withColumn("artists", buildArtistsUDF($"artist"))
+      .withColumn("streams", $"streams".cast("long"))
+      .withColumn("duration_ms", $"duration_ms".cast("long"))
+      .withColumn("af_key", $"af_key".cast("int"))
+      .withColumn("af_mode", $"af_mode".cast("int"))
+      .withColumn("af_time_signature", $"af_time_signature".cast("int"))
       .drop("artist")
       .as[SilverSpotifyChartData]
   }
@@ -73,15 +74,9 @@ object SilverSCDTableBuilder extends SparkSessionProvider with LazyLogging {
   def main(args: Array[String]): Unit = {
     OParser.parse(argParser, args, Config()) match {
       case Some(config) =>
-        // confirm that the input path exists
-        assert(new java.io.File(config.inputPath).exists)
-
-        val schema = Encoders.product[BronzeSpotifyChartData].schema
-
         val ds: Dataset[SilverSpotifyChartData] = spark.readStream
-          .schema(schema)
-          .option("format", "delta")
-          .load()
+          .format("delta")
+          .load(config.inputPath)
           .as[BronzeSpotifyChartData]
           .transform(silverTransform)
 

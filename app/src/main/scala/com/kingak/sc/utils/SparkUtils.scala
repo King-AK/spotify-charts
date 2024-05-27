@@ -1,5 +1,6 @@
 package com.kingak.sc.utils
 
+import com.kingak.sc.utils.FileUtils.fileExists
 import com.typesafe.scalalogging.LazyLogging
 import io.delta.tables.{DeltaTable, DeltaTableBuilder}
 import org.apache.spark.sql.Dataset
@@ -11,7 +12,8 @@ object SparkUtils extends SparkSessionProvider with LazyLogging {
       ds: Dataset[_],
       clusterBy: Option[Seq[String]] = None
   ): Unit = {
-    if (new java.io.File(path).exists) {
+    if (fileExists(path)) {
+      logger.info(s"Checking if Delta table already exists at path ${path}")
       assert(DeltaTable.isDeltaTable(path))
       logger.info(s"Delta table already exists at path ${path}")
     } else {
@@ -20,10 +22,7 @@ object SparkUtils extends SparkSessionProvider with LazyLogging {
       )
 
       val schema = ds.schema
-      val dtBuilder: DeltaTableBuilder = schema.foldLeft(DeltaTable.create()) {
-        (dt, field) =>
-          dt.addColumn(field.name, field.dataType.typeName, field.nullable)
-      }
+      val dtBuilder: DeltaTableBuilder = DeltaTable.create().addColumns(schema)
 
       {
         clusterBy match {

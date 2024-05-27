@@ -29,10 +29,6 @@ object BronzeSCDTableBuilder extends SparkSessionProvider with LazyLogging {
       opt[String]('i', "input")
         .required()
         .valueName("<input>")
-        .validate(x =>
-          if (new java.io.File(x).exists) success
-          else failure("input file does not exist")
-        )
         .action((x, c) => c.copy(inputPath = x))
         .text("input specifies the path to the input file or directory"),
       opt[String]('o', "output")
@@ -53,9 +49,6 @@ object BronzeSCDTableBuilder extends SparkSessionProvider with LazyLogging {
   def main(args: Array[String]): Unit = {
     OParser.parse(argParser, args, Config()) match {
       case Some(config) =>
-        // confirm that the input path exists
-        assert(new java.io.File(config.inputPath).exists)
-
         val schema = Encoders.product[BronzeSpotifyChartData].schema
 
         val ds = spark.readStream

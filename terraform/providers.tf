@@ -16,8 +16,8 @@ provider "azurerm" {
   skip_provider_registration = true
 }
 
-#provider "databricks" {
-#  azure_workspace_resource_id = module.azure-databricks-workspace.databricks_workspace_resource_id
-#  host = module.azure-databricks-workspace.databricks_workspace_url
-#  auth_type = "azure-cli"
-#}
+provider "databricks" {
+  azure_workspace_resource_id = var.databricks_workspace_resource_id
+  host = var.databricks_workspace_url
+  auth_type = "azure-cli"
+}

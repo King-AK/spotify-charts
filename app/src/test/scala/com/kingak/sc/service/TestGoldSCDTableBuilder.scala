@@ -1,12 +1,18 @@
 package com.kingak.sc.service
 
+import com.kingak.sc.model.com.kingak.sc.model.GoldSpotifySongData
 import com.kingak.sc.model.{
-  BronzeSpotifyChartData,
   GoldSpotifyArtistData,
+  GoldSpotifyChartData,
+  GoldSpotifyRelationshipData,
   SilverSpotifyChartData
 }
-import com.kingak.sc.service.goldIngestion.GoldSCDTableBuilder.goldTransformArtistData
-import com.kingak.sc.service.silverIngestion.SilverSCDTableBuilder.silverTransform
+import com.kingak.sc.service.goldIngestion.GoldSCDTableBuilder.{
+  goldTransformArtistData,
+  goldTransformChartData,
+  goldTransformRelationshipData,
+  goldTransformSongData
+}
 import com.kingak.sc.utils.SparkSessionProvider
 import org.apache.spark.sql.{Dataset, Encoders, SparkSession}
 import org.junit.runner.RunWith
@@ -54,6 +60,92 @@ class TestGoldSCDTableBuilder extends AnyFunSuite with BeforeAndAfterEach {
         "cbcc39b7-6017-576c-98f7-0e68d34e8015" // Major Lazer
       )
     )(artistUUIDs)
+  }
+
+  test(
+    "Transforms should be applied to SilverSpotifyChartData to create GoldSpotifyChartData"
+  ) {
+    val schema = Encoders.product[SilverSpotifyChartData].schema
+    val testDataPath = "src/test/resources/SilverSpotifyChartData"
+
+    val df = spark.read
+      .schema(schema)
+      .option("format", "delta")
+      .option("path", testDataPath)
+      .load()
+      .as[SilverSpotifyChartData]
+
+    assertResult(30000)(df.count)
+
+    // Apply transformations to create GoldSCDTables
+    val chartDataDF: Dataset[GoldSpotifyChartData] =
+      df.transform(goldTransformChartData)
+
+    assertResult(30000)(chartDataDF.count)
+  }
+
+  test(
+    "Transforms should be applied to SilverSpotifyChartData to create GoldSpotifySongData"
+  ) {
+    val schema = Encoders.product[SilverSpotifyChartData].schema
+    val testDataPath = "src/test/resources/SilverSpotifyChartData"
+
+    val df = spark.read
+      .schema(schema)
+      .option("format", "delta")
+      .option("path", testDataPath)
+      .load()
+      .as[SilverSpotifyChartData]
+
+    assertResult(30000)(df.count)
+
+    // Apply transformations to create GoldSCDTables
+    val spotifySongDataDF: Dataset[GoldSpotifySongData] =
+      df.transform(goldTransformSongData)
+
+    // assert song UUIDS
+    val songUUIDs = spotifySongDataDF
+      .filter(
+        $"track_id".isin(
+          "2r9homVqy3ntb7iOoROL88",
+          "2xNZeeqmwMPVKnD7FSQfgt",
+          "5N8nNuTmIzkZOfcxXlygUw"
+        )
+      )
+      .orderBy("track_id")
+      .collect()
+      .map(_.songUUID)
+
+    assertResult(
+      Array(
+        "4c5017aa-ceb3-5cdf-a01e-65353ac45fe6", // 2r9homVqy3ntb7iOoROL88
+        "600ed63d-d84c-5578-be21-ea4f380d6997", // 2xNZeeqmwMPVKnD7FSQfgt
+        "fb5c23ea-ef1e-5c1e-9616-843a9fefe43a" // 5N8nNuTmIzkZOfcxXlygUw
+      )
+    )(songUUIDs)
+  }
+
+  test(
+    "Transforms should be applied to SilverSpotifyChartData to create GoldSpotifyRelationshipData"
+  ) {
+    val schema = Encoders.product[SilverSpotifyChartData].schema
+    val testDataPath = "src/test/resources/SilverSpotifyChartData"
+
+    val df = spark.read
+      .schema(schema)
+      .option("format", "delta")
+      .option("path", testDataPath)
+      .load()
+      .as[SilverSpotifyChartData]
+
+    assertResult(30000)(df.count)
+
+    // Apply transformations to create GoldSCDTables
+    val relationshipDataDF: Dataset[GoldSpotifyRelationshipData] =
+      df.transform(goldTransformRelationshipData)
+
+    // display some data
+    assertResult(7021)(relationshipDataDF.count)
   }
 
 }
