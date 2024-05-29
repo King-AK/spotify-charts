@@ -29,8 +29,18 @@ terraform apply -auto-approve -var-file=environment/poc.tfvars \
   -var='poc_storage_account_key=<STORAGE-ACCOUNT-KEY>'
 ```
 
+## Terraform Destroy
+The pipeline can be destroyed with the following command:
+```bash
+terraform destroy -auto-approve -var-file=environment/poc.tfvars \
+  -var='databricks_workspace_resource_id=<DATABRICKS-WORKSPACE-RESOURCE-ID>' \
+  -var='databricks_workspace_url=<DATABRICKS-WORKSPACE-URL>' \
+  -var='poc_storage_account_key=<STORAGE-ACCOUNT-KEY>'
+```
+
 ## Local Run
 The pipeline can be run locally with spark-submit (spark version >=3.5) using the following command:
 ```bash
 bash utils/local-run.sh
 ```
+
