@@ -5,7 +5,7 @@
 build
 
 # Ignore idea directories
-.idea/copilot
+.idea/
 
 # terraform stuff
 terraform/.terraform
